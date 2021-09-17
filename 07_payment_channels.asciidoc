@@ -246,7 +246,7 @@ minimum_depth:: This is the number of confirmations that Bob's node expects for 
 
 ==== The funding transaction
 
-Once Alice's node receives Bob's +accept_channel+ message, it has the information necessary to construct the _funding transaction_ that anchors the channel to the Bitcoin blockchain. As we discussed in earlier chapters, a lightning payment channel is anchored by a 2-of-2 multisignature address. First, we need to generate that multisignature address in order to allow us to construct the funding transaction (and the refund transaction as described below).
+Once Alice's node receives Bob's +accept_channel+ message, it has the information necessary to construct the _funding transaction_ that anchors the channel to the Bitcoin blockchain. As we discussed in earlier chapters, a Lightning payment channel is anchored by a 2-of-2 multisignature address. First, we need to generate that multisignature address in order to allow us to construct the funding transaction (and the refund transaction as described below).
 
 ==== Generating a multisignature address
 
