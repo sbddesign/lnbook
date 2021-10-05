@@ -5,10 +5,10 @@
 
 In this chapter, we'll dive into the wire protocol of the Lightning network,
 and also cover all the various extensibility levers that have been built into
-the protocol. By the end of this chapter, and aspiring reader should be able to
+the protocol. By the end of this chapter, an aspiring reader should be able to
 write their very own wire protocol parser for the Lighting Network. In addition
 to being able to write a custom wire protocol parser, a reader of this chapter
-will gain a deep understanding with respect of the various upgrade mechanisms
+will gain a deep understanding with respect to the various upgrade mechanisms
 that have been built into the protocol.
 
 === Wire Framing
