@@ -1,4 +1,5 @@
 [[operating_ln_node]]
+[[node_operations]]
 == Operating a Lightning Network node
 
 After having read this far, you have probably set up a Lightning wallet. In this chapter, we will take things one step further and set up a full Lightning node. In addition to setting one up, we will learn how to operate it and maintain it over time.
@@ -86,6 +87,11 @@ They are relatively inexpensive, when compared to a PC or a laptop.
 The advantage of a dedicated device as a platform for Lightning and Bitcoin nodes is that it can run continuously, silently, and unobtrusively on your home network, tucked behind your router or TV.
 No one will even know that this little box is actually part of a global banking system!
 
+[WARNING]
+====
+Operating a node on a 32-bit operating system and/or 32-bit CPU is not recommended, as the node software may run into resource issues, causing a crash and possibly a loss of funds.
+====
+
 ==== What hardware is required to run a Lightning node?
 
 At a minimum, the following will be required to run a Lightning node:
@@ -134,6 +140,7 @@ For example, the Raspberry Pi 4 cannot benefit from them because of the limited 
 
 To choose the size, let's look at the Bitcoin blockchain. As of August 2021, its size is 360GB including the transaction index and grows by roughly 60GB/year. If you want to have some margin available for future growth or to install other data on your node, purchase at least a 512GB drive or better yet a 1TB drive.
 
+[[helpers]]
 === Using an installer or helper
 
 Installing a Lightning node or a Bitcoin node may be daunting if you are not familiar with a command line environment. Luckily, there are a number of projects that make "helpers", i.e. software that installs and configures the various components for you. You will still need to learn some command line incantations to interact with your node, but most of the initial work is done for you.
@@ -202,7 +209,7 @@ Umbrel is currently still in beta and not considered secure.
 While not initially designed as an installation "helper", the e-commerce and payment platform _BTCPay Server_ has an incredibly easy installation system that uses Docker containers and +docker-compose+ to install a Bitcoin node, Lightning node, and payment gateway, among many other services. It can be installed on a variety of hardware platforms, from a simple Raspberry Pi 4 (4GB recommended) to a mini PC, old laptop, desktop or server.
 
 BTCPay Server is a fully-featured self-hosted self-custody e-commerce platform that can be integrated with many e-commerce platforms such as Wordpress Woocommerce and others. The installation of the full node is only a step of the e-commerce platform installation.
-While originally developed as a feature-for-feature replacement of the _Bitpay_ commercial payment service and API, it has evolved past that to be a complete platform for BTC and Lighting services related to e-commerce. For many sellers or shops it is a one-shop turn-key solution to e-commerce.
+While originally developed as a feature-for-feature replacement of the _Bitpay_ commercial payment service and API, it has evolved past that to be a complete platform for BTC and Lightning services related to e-commerce. For many sellers or shops it is a one-shop turn-key solution to e-commerce.
 
 More information can be found at:
 
@@ -464,7 +471,7 @@ Sometimes, even if your Internet router supports UPNP, it may be turned off by d
 
 . Find a setting for UPNP and turn it on.
 
-Restart your Bitcoin and/or Lighting node and repeat the open port test with one of the websites we used in the previous section.
+Restart your Bitcoin and/or Lightning node and repeat the open port test with one of the websites we used in the previous section.
 
 ===== Using Tor for incoming connections
 
@@ -614,7 +621,7 @@ Keep in mind that this technique does not move funds into cold storage. Both Lig
 
 ===== Submarine swap sweep
 
-Another way to reduce your Lightning hot-wallet balance is to use a technique called a _submarine swap_. Submarine swaps, conceptualized by co-author Olaoluwa Osuntokun and Alex Bosworth, allow the exchange of on-chain bitcoin for Lightning payments and vice versa.
+Another way to reduce your Lightning hot-wallet balance is to use a technique called a _submarine swap_. Submarine swaps, conceptualized by co-author Olaoluwa Osuntokun and Alex Bosworth, allow the exchange of on-chain bitcoin for Lightning payments and vice versa. Essentially, submarine swaps are atomic swaps between Lightning off-chain funds and Bitcoin on-chain funds.
 
 A node operator can initiate a submarine swap and send all available channel balances to the other party who will send them as a result on-chain bitcoin in exchange.
 
@@ -622,7 +629,7 @@ In the future, this could be a paid service offered by nodes on the Lightning Ne
 
 The advantage of a submarine swap for sweeping funds is that no channel needs to be closed. That means that we preserve our channels, only re-balancing our channels through this operation. As we send a Lightning payment out, we shift some balance from local to remote on one or more of our channels. Not only does that reduce the balance exposed in our node's hot wallet, it also increases the balance available for future incoming payments.
 
-You could do this by trusting an intermediary to act as a gateway, but this risks your coins being stolen. But in the case of a submarine swap, the operation does not require trust. Submarine swaps are non-custodial _atomic_ operations. That means that the counterparty in your submarine swap cannot steal your funds because the on-chain payment depends on the completion of the off-chain payment and vice-versa. We will discuss submarine swaps in more detail in <<submarine_swaps>>.
+You could do this by trusting an intermediary to act as a gateway, but this risks your coins being stolen. But in the case of a submarine swap, the operation does not require trust. Submarine swaps are non-custodial _atomic_ operations. That means that the counterparty in your submarine swap cannot steal your funds because the on-chain payment depends on the completion of the off-chain payment and vice-versa.
 
 ===== Submarine swaps with Loop
 
@@ -691,6 +698,7 @@ https://lightning.watch
 
 Over time, we expect more third-party services to provide specialized Lightning node monitoring payable via micro-payments. Perhaps such services and their APIs will become standardized and will one day be directly supported by Lightning node software.
 
+[[watchtowers]]
 ==== Watchtowers
 
 _Watchtowers_ are a mechanism for outsourcing the monitoring and penalty resolution of Lightning protocol violations.
@@ -766,6 +774,7 @@ One way to find well connected nodes is to open a channel to a popular merchant 
 
 Another way to find well-connected nodes is to use a Lightning Explorer (see <<ln_explorer>>) such as +1ml.com+ and browse the list of nodes sorted by channel capacity and number of channels. Don't go for the biggest nodes as that encourages centralization. Go for a node in the middle of the list so that you can help them grow. Another factor to consider might be the time span a node has been in operation. Nodes established for more than a year are likely to be more reputable and less risky than nodes that started operation a week ago.
 
+[[autopilot]]
 ===== Autopilot
 
 The task of opening channels can be partially automated with the use of an _autopilot_, which is software that opens channels automatically based on some heuristic rules. Autopilot software is still relatively new and it doesn't always select the best channel partners for you. Especially in the beginning, it might be better to open channels manually.
@@ -773,7 +782,7 @@ Autopilots currently exist in 3 forms.
 
 - +lnd+ incorporates an autopilot that is fully integrated with +lnd+ and runs constantly in the background while turned on.
 - +lib_autopilot.py+ can offer autopilot computations for any node implementation based on the gossip and channel data.
-- A +c-lighting+ plugin based on +lib_autopilot.py+ exists that provides an easy to use interface for +c-lightning+ users.
+- A +c-lightning+ plugin based on +lib_autopilot.py+ exists that provides an easy to use interface for +c-lightning+ users.
 
 Be aware that the +lnd+ autopilot will start running in the background as soon as it is turned on via the config file. As a result it will start opening channels immediately if you have onchain outputs in your +lnd+ wallet.
 If you want to have full control over the bitcoin transactions that you make and the channels that you open, make sure to turn the autopilot off _before_ you load your +lnd+ wallet with bitcoin funds.
@@ -895,6 +904,7 @@ Some examples:
 * Your channel partner is online, but is not responding to requests to initiate a mutual close.
 * Your channel partner is online and your nodes are negotiating a mutual close, but they become stuck and cannot reach a resolution.
 
+[[channel_rebalancing]]
 ==== Re-balancing channels
 
 In the course of transacting and routing payments on Lightning, the combination of inbound and outbound capacities can become unbalanced.
@@ -903,15 +913,15 @@ For example, if one of your channel partners is frequently routing payments thro
 
 There are many ways to re-balance channels, each with different advantages and disadvantages. One way is to use a _submarine swap_ (e.g. +Loop-Out+) as described previously in this chapter. Another way to re-balance is to simply wait for routed payments that flow in the opposite direction. If your node is well connected, when a specific route becomes exhausted in one direction, the same route becomes available in the opposite direction. Other nodes may "discover" that route in the opposite direction and start using it as part of their payment path, thereby re-balancing the funds again.
 
-A third way to re-balance channels is to purposefully create a _circular route_ that sends a payment from your node back to your node, via the Lightning Network. By sending a payment out on a channel with large local capacity and arranging the path so that it returns to your node on a channel with large remote capacity, both of those channels will become more balanced. An example of a circular route re-balancing strategy can be seen in <<circular-rebalancing>>.
+A third way to re-balance channels is to purposefully create a _circular route_ that sends a payment from your node back to your node, via the Lightning Network. By sending a payment out on a channel with large local capacity and arranging the path so that it returns to your node on a channel with large remote capacity, both of those channels will become more balanced. An example of a circular route re-balancing strategy can be seen in <<circular_rebalancing>>.
 
-[[circular-rebalancing]]
+[[circular_rebalancing]]
 .Circular route re-balancing
 image::images/circular-rebalancing.png[]
 
 Circular re-balancing is supported by most Lightning node implementations and can be done on the command line or via one of the web management interfaces such as _Ride the Lightning (RTL)_ (see <<rtl>>).
 
-Channel rebalancing is a complex issue that is the subject of active research and covered in more detail in <<rebalancing_channels>>.
+Channel rebalancing is a complex issue that is the subject of active research and covered in more detail in <<channel_rebalancing>>.
 
 === Routing fees
 
@@ -953,8 +963,8 @@ Managing your Lightning node on the command line is obviously not easy. It gives
 
 There are a number of competing projects that offer web-based Lightning node management. Some of the most popular ones are described below.
 
+[[rtl]]
 ==== Ride The Lightning (RTL)
-
 
 
 _RTL_ is a graphical web user interface to help users manage Lightning node operations for the three main Lightning node implementations (LND, c-lightning, and Eclair). RTL is an open source project developed by Suheb, Shahana Farooqui, and many other contributors. You can find the RTL software here:
@@ -972,7 +982,7 @@ Lightning Labs, the makers of LND, provide a web-based graphical user interface 
 
 https://github.com/lightninglabs/lndmon
 
-=== ThunderHub
+==== ThunderHub
 
 A very aesthetically pleasing web-based graphical user interface similar to RTL but exclusive to LND. It can be used to make payments, rebalance channels and manage the node through a variety of features. Find +ThunderHub+ here:
 
