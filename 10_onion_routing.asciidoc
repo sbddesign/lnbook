@@ -35,6 +35,7 @@ There may be many paths that make it possible for Alice to reach Dina. We will e
 As a reminder, the path selected by Alice is shown in <<alice_dina_path>>, below:
 
 [[alice_dina_path]]
+.Path: Alice to Bob to Chan to Dina
 image::images/alice_dina_path.png["Alice to Bob to Chan to Dina"]
 
 Let's see how Alice can use this path without revealing information to intermediaries Bob and Chan.
@@ -110,7 +111,7 @@ From <<routing>> we know that Alice will send a 50,000 satoshi payment to Dina v
 .Payment path with HTLCs from Alice to Dina
 image::images/alice-dina-htlc.png[Payment path with HTLCs from Alice to Dina]
 
-As we see in <<gossip>>, Alice is able to construct this path to Dina because Lightning nodes announce their channels to the entire Lightning Network using the _Lightning Gossip Protocol_. After the initial channel announcement, Bob and Chan each sent out an additional "channel update" message with their routing fee and timelock expectations for payment routing.
+As we will see in <<gossip>>, Alice is able to construct this path to Dina because Lightning nodes announce their channels to the entire Lightning Network using the _Lightning Gossip Protocol_. After the initial channel announcement, Bob and Chan each sent out an additional "channel update" message with their routing fee and timelock expectations for payment routing.
 
 From the announcements and updates, Alice knows the following information about the channels between Bob, Chan and Dina:
 
@@ -132,7 +133,12 @@ Alice already knows her own channel to Bob, and therefore doesn't need this info
 
 ==== Alice constructs the payloads
 
-There are two possible formats that Alice can use for the information communicated to each hop: A legacy fixed-length format called the _hop data_ and a more flexible Type-Length-Value (TLV) based format called the _hop payload_. The TLV message format is explained in more detail in <<tlv>>. It offers flexibility by allowing fields to be added to the protocol at will. Both formats are specified in https://github.com/lightningnetwork/lightning-rfc/blob/master/04-onion-routing.md#packet-structure[BOLT #4 - Onion Routing - Packet Structure]
+There are two possible formats that Alice can use for the information communicated to each hop: A legacy fixed-length format called the _hop data_ and a more flexible Type-Length-Value (TLV) based format called the _hop payload_. The TLV message format is explained in more detail in <<tlv>>. It offers flexibility by allowing fields to be added to the protocol at will.
+
+[NOTE]
+====
+Both formats are specified in https://github.com/lightningnetwork/lightning-rfc/blob/master/04-onion-routing.md#packet-structure[BOLT #4 - Onion Routing - Packet Structure.]
+====
 
 Alice will start building the hop data from the end of the path backwards: Dina, Chan, Bob.
 
@@ -222,7 +228,7 @@ image::images/onion_hop_payloads.png[Hop payloads for all the hops]
 
 Alice must now generate several keys that will be used to encrypt the various layers in the onion.
 
-Remember the goals of onion routing, that Alice can achieve with these keys:
+With these keys, Alice can achieve a high degree of privacy and integrity:
 
 * Alice can encrypt each layer of the onion so that only the intended recipient can read it.
 * Every intermediary can check that the message is not modified.
@@ -232,7 +238,7 @@ Remember the goals of onion routing, that Alice can achieve with these keys:
 
 [WARNING]
 ====
-Like a chopped onion, the following technical details may bring tears to your eyes. Feel free to skip to the next section if you get confused. Come back to this and read BOLT #4 if you want to learn more.
+Like a chopped onion, the following technical details may bring tears to your eyes. Feel free to skip to the next section if you get confused. Come back to this and read https://github.com/lightningnetwork/lightning-rfc/blob/master/04-onion-routing.md#packet-construction[BOLT #4 - Onion Routing - Packet Construction], if you want to learn more.
 ====
 
 
@@ -278,56 +284,58 @@ One important detail that seems almost magical is the ability for Alice to creat
 // To editor: Maybe put this in an appendix instead of a sidebar?
 
 [[ecdh]]
+[[ecdh_explained]]
 .Elliptic Curve Diffie-Hellman (ECDH) explained
 ****
-Assume Alice's private key is +a+ and Bob's private key is +b+. Using the Elliptic Curve, they multiply each private key by the generator point +G+ to produce their public keys +A+ and +B+ respectively:
+Assume Alice's private key is +a+ and Bob's private key is +b+. Using the Elliptic Curve, Alice and Bob each multiply their private key by the generator point +G+ to produce their public keys +A+ and +B+ respectively:
 
  A = aG
 
  B = bG
 
-Now Alice and Bob can create a shared secret +ss+, a value that they can both calculate independently without exchanging any information, such that
+Now Alice and Bob can use _Elliptic Curve Diffie-Hellman Key Exchange_ to create a shared secret +ss+, a value that they can both calculate independently without exchanging any information
+
+The shared secret +ss+ is calculated by each by multiplying their own private key with the *other's* public key, such that:
 
  ss = aB = bA
 
+But why would these two multiplications result in the same value +ss+?
 Follow along, as we demonstrate the math that proves this is possible:
 
  ss
 
  = aB
 
-calculated by Alice who knows both +a+ and +B+
+calculated by Alice who knows both +a+ (her private key) and +B+ (Bob's public key)
 
  = a(bG)
 
-because we know
+because we know that B = bG, we substitute
 
  = (ab)G
 
-because of associativity
+because of associativity, we can move the parentheses
 
  = (ba)G
 
-because the curve is an abelian group
+because xy = yx (the curve is an abelian group)
 
  = b(aG)
 
-because of associativity
+because of associativity, we can move the parentheses
 
  = bA
 
-can be calculated by Bob who knows +b+ and +A+
+ because A = aG, we can substitute
 
+The result bA can be calculated independently by Bob who knows +b+ (his private key) and +A+ (Alice's public key).
 
 We have therefore shown that
 
- ss = aB = bA
+ ss = aB (Alice can calculate this)
+ ss = bA (Bob can calculate this)
 
-Alice can multiple her private key with Bob's public key to calculate +ss+
-
-Bob can multiply his private key with Alice's public key to calculate +ss+
-
-Thus, they will both get the same result which they can use as a shared key to symmetrically encrypt secrets between the two of them without communicating the shared secret.
+Thus, they can each independently calculate +ss+ which they can use as a shared key to symmetrically encrypt secrets between the two of them without communicating the shared secret.
 
 ****
 
@@ -400,27 +408,27 @@ For each hop the sender (Alice) repeats the same process:
 
 1. Alice generates the per-hop shared secret and the rho, mu, and pad keys
 
-1. Alice generates 1300 bytes of filler and fills the 1300-byte onion payload field with this filler.
+2. Alice generates 1300 bytes of filler and fills the 1300-byte onion payload field with this filler.
 
-1. Alice calculates the HMAC for the hop payload (zeros for the final hop).
+3. Alice calculates the HMAC for the hop payload (zeros for the final hop).
 
-1. Alice calculates the length of the hop payload + HMAC + space to store the length itself
+4. Alice calculates the length of the hop payload + HMAC + space to store the length itself
 
-1. Alice _right shifts_ the onion payload by the calculated space needed to fit the hop payload. The rightmost "filler" data is discarded, making enough space on the left for the payload.
+5. Alice _right shifts_ the onion payload by the calculated space needed to fit the hop payload. The rightmost "filler" data is discarded, making enough space on the left for the payload.
 
-1. Alice inserts the length + hop payload + HMAC at the front of the payload field in the space made from shifting the filler.
+6. Alice inserts the length + hop payload + HMAC at the front of the payload field in the space made from shifting the filler.
 
-1. Alice uses the _rho_ key to generate a 1300 byte one-time-pad.
+7. Alice uses the _rho_ key to generate a 1300 byte one-time-pad.
 
-1. Alice obfuscates the entire onion payload by XOR-ing with the bytes generated from rho.
+8. Alice obfuscates the entire onion payload by XOR-ing with the bytes generated from rho.
 
-1. Alice calculates the HMAC of the onion payload, using the mu key.
+9. Alice calculates the HMAC of the onion payload, using the mu key.
 
-1. Alice adds the session public key (so that the hop can calculate the shared secret)
+10. Alice adds the session public key (so that the hop can calculate the shared secret)
 
-1. Alice adds the version number.
+11. Alice adds the version number.
 
-1. Deterministically re-blinds the session key using a value derived by hashing the shared secret and prior hop's public key.
+12. Deterministically re-blinds the session key using a value derived by hashing the shared secret and prior hop's public key.
 
 Next, Alice repeats the process. The new keys are calculated, the onion payload is shifted (dropping more junk), the new hop payload is added to the front and the whole onion payload encrypted with the rho byte-stream for the next hop.
 
@@ -581,7 +589,7 @@ In this section we will look at how the onion packet is forwarded and how HTLCs 
 
 ==== The update_add_htlc message
 
-Onion packets are sent as part of the +update_add_htlc+ message. If you recall from <<update_add_htlc>>, in <<channel_operations>>, we saw the contents of the +update_add_htlc+ message were as follows:
+Onion packets are sent as part of the +update_add_htlc+ message. If you recall from <<update_add_htlc>>, in <<channel_operation>>, we saw the contents of the +update_add_htlc+ message were as follows:
 
 ----
 [channel_id:channel_id]
@@ -612,13 +620,13 @@ onion_routing_packet:: The final onion packet Alice constructed with all the hop
 
 ==== Bob checks the onion
 
-As we saw in <<channel_operations>>, Bob will add the HTLC to the commitment transactions and update the state of the channel with Alice.
+As we saw in <<channel_operation>>, Bob will add the HTLC to the commitment transactions and update the state of the channel with Alice.
 
 Bob will unwrap the onion he received from Alice as follows:
 
 1. Bob takes the session key from the onion packet and derives the Alice-Bob shared secret.
 
-1. Bob generates the +mu+ key from the shared secret and uses it to verify the onion packet HMAC checksum.
+2. Bob generates the +mu+ key from the shared secret and uses it to verify the onion packet HMAC checksum.
 
 Now that Bob has generated the shared key and verified the HMAC, he can start unwrapping the 1300 byte onion payload inside the onion packet. The goal is for Bob to retrieve his own hop payload and then forward the remaining onion to the next hop.
 
@@ -672,7 +680,7 @@ Now Bob can keep the first half 1300 bytes, and discard the extended (filler) 13
 
 Bob now has a 1300 byte onion packet to send to the next hop. It is almost identical to the onion payload that Alice had created for Chan, except that the last 65 or so bytes of filler was put there by Bob and will be different.
 
-No one can tell the difference between filler put there by Alice and filler put there by Bob. Filler is filler! It's all random bytes anyway. Note that if Bob (or one of Bob's other aliases) is present in the route in two disctinct locations, then they can tell the difference as the base protocol always uses the same payment hash across the entire route. Atomic Multipath Payments (AMP), and Point Time Locked Contrats (PTLCs) eliminate the correlation vector by randomizing the payment idenitifer across each route/hop.
+No one can tell the difference between filler put there by Alice and filler put there by Bob. Filler is filler! It's all random bytes anyway. Note that if Bob (or one of Bob's other aliases) is present in the route in two disctinct locations, then they can tell the difference as the base protocol always uses the same payment hash across the entire route. Atomic Multipath Payments (AMP), and Point Time Locked Contrats (PTLCs) eliminate the correlation vector by randomizing the payment identifier across each route/hop.
 
 ==== Bob constructs the new onion packet
 
@@ -724,27 +732,27 @@ Chan repeats the exact same process as Bob:
 
 1. Chan receives the +update_add_htlc+ and processes the HTLC request, adding it to commitment transactions.
 
-1. Chan generates the Alice-Chan shared key and the +mu+ subkey
+2. Chan generates the Alice-Chan shared key and the +mu+ subkey
 
-1. Chan verifies the onion packet HMAC, then extracts the 1300 onion payload
+3. Chan verifies the onion packet HMAC, then extracts the 1300 onion payload
 
-1. Chan extends the onion payload by 1300 extra bytes, filling it with zeroes.
+4. Chan extends the onion payload by 1300 extra bytes, filling it with zeroes.
 
-1. Chan uses the +rho+ key to produce 2600 bytes.
+5. Chan uses the +rho+ key to produce 2600 bytes.
 
-1. Chan uses the generated byte stream to XOR and de-obfuscate the onion payload. Simultaneously the XOR operation obfuscates the extra 1300 zeroes, turning them into filler
+6. Chan uses the generated byte stream to XOR and de-obfuscate the onion payload. Simultaneously the XOR operation obfuscates the extra 1300 zeroes, turning them into filler
 
-1. Chan extracts the inner HMAC in the payload, which will become the outer HAMC for Dina.
+7. Chan extracts the inner HMAC in the payload, which will become the outer HAMC for Dina.
 
-1. Chan removes his hop payload and left-shifts the onion payload by the same amount. Some of the filler generated in the 1300 extended bytes move into the first-half 1300 bytes becoming part of the onion payload.
+8. Chan removes his hop payload and left-shifts the onion payload by the same amount. Some of the filler generated in the 1300 extended bytes move into the first-half 1300 bytes becoming part of the onion payload.
 
-1. Chan constructs the onion packet for Dina with this onion payload.
+9. Chan constructs the onion packet for Dina with this onion payload.
 
-1. Chan builds an +update_add_htlc+ message for Dina and inserts the onion packet into it.
+10. Chan builds an +update_add_htlc+ message for Dina and inserts the onion packet into it.
 
-1. Chan sends the +update_add_htlc+ to Dina
+11. Chan sends the +update_add_htlc+ to Dina
 
-1. Chan re-randomizes the session key as Bob did in the prior hop for Dina.
+12. Chan re-randomizes the session key as Bob did in the prior hop for Dina.
 
 ==== Dina receives the final payload
 
@@ -796,7 +804,7 @@ Eventually, the sender (origin node) receives a return packet. It will then gene
 
 The +failuremsg+ is defined in https://github.com/lightningnetwork/lightning-rfc/blob/master/04-onion-routing.md#failure-messages[BOLT #4 - Onion Routing - Failure Messages].
 
-A failure message consists of a 2-byte +failure code+ followed by the data applicable to that failute type.
+A failure message consists of a 2-byte +failure code+ followed by the data applicable to that failure type.
 
 The top byte of the +failure_code+ is a set of binary flags that can be combined (with binary OR):
 
@@ -820,6 +828,68 @@ However, this means that the sender of the HTLC has to wait until expiry, and th
 
 One proposed solution to this problem is called "stuckless payments", and it depends on Point Time-Locked Contracts (PTLCs), which are payment contract that use a different cryptographic primitive than HTLCs (i.e. point addition on the elliptic curve instead of a hash and secret pre-image). PTLCs are cumbersome using ECDSA but much easier with Bitcoin's Taproot and Schnorr Signature features which were recently locked in for activation in November 2021. It is expected that PTLCs will be implemented in the Lightning Network after these Bitcoin features become activated.
 
+[[keysend]]
+=== `keysend` Spontaenous Payments
+
+In the payment flow described earlier in the chapter, we assumed that Dina
+received an invoice from Alice "out of band", or obtained it via some mechanism
+unrelated to the protocol (typically copy/paste or QR code scans). This trait
+means that the payment process always takes two steps: first the sender
+obtains an invoice and then uses the payment hash (encoded in the invoice) to
+successfully route an HTLC. This extra round trip required to obtain an invoice
+before making a payment may be a bottleneck in applications that involve
+streaming micro payments over Lightning. What if we could just "push" a payment
+over spontaneously, without having to obtain an invoice from the recipient
+first? The "keysend" protocol is an end-to-end extension (only the sender and
+receiver are aware) to the Lightning protocol that enables spontaneous push
+payments.
+
+==== Custom Onion TLV Records
+
+The modern Lightning protocol uses the TLV (Type-Length-Value) encoding in
+the onion to encode information that tells each node _where_ and _how_ to
+forward the payment. Leveraging the TLV format, each piece of routing information
+(like the next node to pass the HTLC to) is assigned a specific type (or key)
+encoded as a `BigSize` variable length integer (max sized as as 64-bit
+integer). These "essential" (reversed values below `65536`) types are defined
+in BOLT-04 along with the rest of the onion routing details. Onion types with a
+value greater than `65536` are intended to be used by wallets and applications
+as "custom records".
+
+Custom records allow payment applications to attach additional metadata or
+context to a payment as key/value pairs in the onion. Since the custom records
+are included in the onion payload itself, like all other hop contents, the
+records are end to end encrypted. As the custom records effectively consume a
+portion of the fixed-sized `1300` bytes onion packet, encoding each key and
+value of each custom record reduces the amount of available space for encoding
+the rest of the route. In practice, this means that more onion space that is
+used for custom records, the shorter the route can be. Given that each HTLC
+packet is fixed sized, custom records don't _add_ any additional data to an
+HTLC, rather they re-allocate bytes that would've been filled with random data
+otherwise.
+
+==== Sending & Receiving `keysend` payments
+
+A `keysend` payment inverts the typical flow of an HTLC where the receiver
+reveals a secret pre-image to the sender. Instead, the sender includes the
+pre-image _within_ the onion to the receiver and routes the HTLC to the
+receiver. The receiver then decrypts the onion payload, and uses the included
+pre-image (which MUST match the payment hash of the HTLC) to settle the
+payment. As a result, `keysend` payments can be carried out without first
+obtaining an invoice from the receiver, as the pre-image is "pushed" over to
+the receiver. A `keysend` payment uses a TLV custom record type of `5482373484`
+to encode a 32-byte pre-image value. 
+
+==== `keysend` & Custom Records in Lightning Applications
+
+Many streaming Lightning applications use the `keysend` protocol to continually
+stream satoshis to a destination identified by its public key in the network.
+Typically an application will also include additional metadata such as a
+tipping/donation note, or other application level information in addition to
+the `keysend` record.
+
 === Conclusion
 
 The Lightning Network's onion routing protocol is adapted from the Sphinx Protocol to better serve the needs of a payment network. As such, it offers a huge improvement in privacy and counter-surveillance compared to the public and transparent Bitcoin blockchain.
+
+In <<path_finding>> we will see how the combination of source routing and onion routing is used by Alice to find a good path and route the payment to Dina. To find a path, Alice first needs to learn about the network topology, which is the topic of the next section <<gossip>>.
